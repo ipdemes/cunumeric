@@ -1,11 +1,8 @@
 import importlib
 
+import numpy
 
-def _filter(obj, n):
-    try:
-        return (
-            n
-            not in [
+blocklist =[
                 "test",
                 "add_docstring",
                 "abs",
@@ -34,11 +31,32 @@ def _filter(obj, n):
                 "mafromtxt",
                 "matmul",
                 "ndfromtxt",
-            ]  # not in blocklist
+            ] 
+def _filter(obj, n):
+    try:
+        return (
+            n
+            not in blocklist
             and callable(getattr(obj, n))  # callable
             and not isinstance(getattr(obj, n), type)  # not class
             and n[0].islower()  # starts with lower char
             and not n.startswith("__")  # not special methods
+            and not isinstance(getattr(obj, n), numpy.ufunc)
+        )
+    except:  # noqa: E722
+        return False
+
+
+def _filter_ufunc(obj, n):
+    try:
+        return (
+            n
+            not in blocklist
+            and callable(getattr(obj, n))  # callable
+            and not isinstance(getattr(obj, n), type)  # not class
+            and n[0].islower()  # starts with lower char
+            and not n.startswith("__")  # not special methods
+            and isinstance(getattr(obj, n), numpy.ufunc)
         )
     except:  # noqa: E722
         return False
@@ -46,6 +64,10 @@ def _filter(obj, n):
 
 def _get_functions(obj):
     return set([n for n in dir(obj) if (_filter(obj, n))])
+
+
+def _get_ufunc_functions(obj):
+    return set([n for n in dir(obj) if (_filter_ufunc(obj, n))])
 
 
 def _import(mod, klass):
@@ -62,12 +84,21 @@ def _import(mod, klass):
         return obj, ":obj:`{}.{{}}`".format(mod)
 
 
-def _section(header, mod_ext, other_lib, klass=None, exclude_mod=None):
+def _section(header, mod_ext, other_lib, klass=None, exclude_mod=None,
+             ufuncs=False):
     base_mod = "numpy" + mod_ext
     other_mod = other_lib + mod_ext
 
+    if ufuncs:
+        klass = None
+        exclude_mod = None
+
+    base_funcs = []
     base_obj, base_fmt = _import(base_mod, klass)
-    base_funcs = _get_functions(base_obj)
+    if ufuncs:
+        base_funcs = _get_ufunc_functions(base_obj)
+    else:
+        base_funcs = _get_functions(base_obj)
     lg_obj, lg_fmt = _import(other_mod, klass)
 
     lg_funcs = []
@@ -131,9 +162,7 @@ def _section(header, mod_ext, other_lib, klass=None, exclude_mod=None):
         "   Number of NumPy functions: {}".format(len(base_funcs)),
         "   Number of functions covered by "
         f"{other_lib}: {len(lg_funcs & base_funcs)}",
-        "   {} specific functions:".format(other_lib),
     ]
-    buf += ["   - {}".format(f) for f in (lg_funcs - base_funcs)]
     buf += [
         "",
     ]
@@ -148,6 +177,7 @@ def generate(other_lib):
         "",
     ]
     buf += _section("Module-Level", "", other_lib)
+    buf += _section("Ufuncs", "", other_lib, None, None, True)
     buf += _section("Multi-Dimensional Array", "", other_lib, klass="ndarray")
     buf += _section("Linear Algebra", ".linalg", other_lib)
     buf += _section("Discrete Fourier Transform", ".fft", other_lib)
