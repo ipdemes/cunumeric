@@ -122,6 +122,20 @@ std::vector<StoreMapping> CuNumericMapper::store_mappings(
       }
       return std::move(mappings);
     }
+    case CUNUMERIC_DIAG:{
+      std::vector<StoreMapping> mappings;
+      auto& inputs  = task.inputs();
+      auto& outputs = task.outputs();
+      for (auto& input : inputs) {
+        mappings.push_back(StoreMapping::default_mapping(input, options.front()));
+        mappings.back().policy.ordering.fortran_order();
+      }
+      for (auto& output : outputs) {
+        mappings.push_back(StoreMapping::default_mapping(output, options.front()));
+        mappings.back().policy.ordering.fortran_order();
+      }
+      return std::move(mappings);
+    }
     case CUNUMERIC_POTRF:
     case CUNUMERIC_TRSM:
     case CUNUMERIC_SYRK:
