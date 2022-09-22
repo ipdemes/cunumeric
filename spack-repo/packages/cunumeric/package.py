@@ -46,6 +46,8 @@ class Cunumeric(CMakePackage, CudaPackage):
 
     depends_on('py-pip')
 
+    depends_on('py-scikit-build')
+
     #git
 
     depends_on('git')
