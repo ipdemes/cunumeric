@@ -114,11 +114,11 @@ class Cunumeric(CMakePackage, CudaPackage):
 
     #clang
 
-    depends_on('llvm')
+    #depends_on('llvm')
 
     #llvm-openmp
 
-    depends_on('llvm-openmp')
+    #depends_on('llvm-openmp')
 
     # tests
 
