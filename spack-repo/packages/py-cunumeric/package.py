@@ -42,21 +42,20 @@ class PyCunumeric(PythonPackage):
     #--------------------------------------------------------------------------#
 
     depends_on('cmake@3.24:')
-    depends_on('python@3.8:',type=("build", "run"))
+    depends_on('python@3.8:')
     depends_on('py-pip')
-    depends_on('py-scikit-build')
+    depends_on('py-scikit-build', type='build')
     #depends_on('git')
     #depends_on('zlib')
     depends_on('ninja')
     depends_on('openmpi')
-    depends_on('py-scikit-build')
     depends_on('cutensor@1.3.3:')
 
 #    cuda_arch_list = ('60', '70', '75', '80', '86')
 #    for _flag in cuda_arch_list:
 #        depends_on("nccl cuda_arch=" + _flag, when=" cuda_arch=" + _flag)
 
-    depends_on('py-setuptools@59:',type=("build", "run"))
+    depends_on('py-setuptools@59:',type='build')
     depends_on('py-cffi')
     depends_on('re2')
     depends_on('pcre2')

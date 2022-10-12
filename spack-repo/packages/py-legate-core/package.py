@@ -67,19 +67,18 @@ class PyLegateCore(PythonPackage):
     #--------------------------------------------------------------------------#
 
     depends_on('cmake@3.24:')
-    depends_on('python@3.8:',type=("build", "run"))
+    depends_on('python@3.8:')
     depends_on('py-pip')
-    depends_on('py-scikit-build')
+    depends_on('py-scikit-build',type='build')
     depends_on('ninja')
     depends_on('openmpi')
-    depends_on('py-scikit-build')
     depends_on('cutensor@1.3.3:')
 
     cuda_arch_list = ('60', '70', '75', '80', '86')
     for _flag in cuda_arch_list:
         depends_on("nccl cuda_arch=" + _flag, when=" cuda_arch=" + _flag)
 
-    depends_on('py-setuptools@59:')
+    depends_on('py-setuptools@59:', type='build')
     depends_on('py-cffi')
     depends_on('re2')
     depends_on('pcre2')
@@ -89,16 +88,16 @@ class PyLegateCore(PythonPackage):
     depends_on('py-scipy')
     depends_on('py-typing-extensions')
 
-    depends_on('py-colorama', when='+tests')
-    depends_on('py-coverage', when='+tests')
-    depends_on('py-mock', when='+tests')
-    depends_on('py-mypy@0.961:', when='+tests')
-    depends_on('py-pre-commit', when='+tests')
-    depends_on('py-pynvml', when='+tests')
-    depends_on('py-pytest', when='+tests')
-    depends_on('py-pytest-cov', when='+tests')
-    #depends_on('py-pytest-lazy-fixture', when='+tests')
-    depends_on('py-docutils', when='+tests')
+#    depends_on('py-colorama', when='+tests')
+#    depends_on('py-coverage', when='+tests')
+#    depends_on('py-mock', when='+tests')
+#    depends_on('py-mypy@0.961:', when='+tests')
+#    depends_on('py-pre-commit', when='+tests')
+#    depends_on('py-pynvml', when='+tests')
+#    depends_on('py-pytest', when='+tests')
+#    depends_on('py-pytest-cov', when='+tests')
+#    #depends_on('py-pytest-lazy-fixture', when='+tests')
+#    depends_on('py-docutils', when='+tests')
 
     depends_on('legion@cr network=gasnet conduit=mpi  +python +cuda +openmp +redop_complex +bindings +shared ')
     # FIXME: Add dependencies if required.
