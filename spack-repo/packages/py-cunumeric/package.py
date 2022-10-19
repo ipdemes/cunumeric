@@ -10,7 +10,7 @@ class PyCunumeric(PythonPackage):
     homepage = 'https://nv-legate.github.io/cunumeric/index.html'
     git      = 'https://github.com/nv-legate/cunumeric.git'
 
-    version('22.10', branch='branch-22.10')
+    version('22.12', branch='branch-22.12')
 
 
     #--------------------------------------------------------------------------#
@@ -32,7 +32,7 @@ class PyCunumeric(PythonPackage):
     variant('openmp', default=True,
             description='Build with OpenMP support')
 
-    variant('cuda', default=True,
+    variant('cuda', default=False,
             description='Build with CUDA support')
 
     #variant ('cuda_arch', default=None, description = 'Cuda architecture')
@@ -42,20 +42,20 @@ class PyCunumeric(PythonPackage):
     #--------------------------------------------------------------------------#
 
     depends_on('cmake@3.24:')
-    depends_on('python@3.8:')
-    depends_on('py-pip')
+    depends_on('python@3.8:', type=('build','link','run'))
+    depends_on('py-pip', type=('build','link','run'))
     depends_on('py-scikit-build', type='build')
     #depends_on('git')
     #depends_on('zlib')
     depends_on('ninja')
     depends_on('openmpi')
-    depends_on('cutensor@1.3.3:')
+#    depends_on('cutensor@1.3.3:')
 
 #    cuda_arch_list = ('60', '70', '75', '80', '86')
 #    for _flag in cuda_arch_list:
 #        depends_on("nccl cuda_arch=" + _flag, when=" cuda_arch=" + _flag)
 
-    depends_on('py-setuptools@59:',type='build')
+    depends_on('py-setuptools@59:', type=('build','link','run'))
     depends_on('py-cffi')
     depends_on('re2')
     depends_on('pcre2')
@@ -65,6 +65,7 @@ class PyCunumeric(PythonPackage):
     depends_on('py-pyarrow@5:')
     depends_on('py-scipy')
     depends_on('py-typing-extensions')
+    depends_on('boost')
 
     #clang
 
@@ -105,14 +106,16 @@ class PyCunumeric(PythonPackage):
 
 
     #FIXME
-    depends_on('py-legate-core +shared cuda_arch=80')
+#    depends_on('py-legate-core +shared cuda_arch=80')
+    depends_on('py-legate-core@22.12 +shared')
 #    depends_on('legion@cr network=gastet conduit=mpi  +python +cuda +openmpi +redop_complexi +bindings arch=80')
 
- #   def global_options(self, spec, prefix):
- #       options = []
- #       if '+cuda' in spec:
- #           options.append('--cuda')
- #       if 'openmp' in spec:
- #           options.append('--openmp')
- #       return options
+    def global_options(self, spec, prefix):
+        options = []
+        options.append('--debug')
+        if '+cuda' in spec:
+            options.append('--cuda')
+        if 'openmp' in spec:
+            options.append('--openmp')
+        return options
 

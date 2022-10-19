@@ -31,7 +31,7 @@ class PyLegateCore(PythonPackage):
 
     maintainers = ["ipdemes"]
 
-    version('22.10', branch = "branch-22.10")
+    version('22.12', branch = "branch-22.12")
 
 
     #--------------------------------------------------------------------------#
@@ -53,7 +53,7 @@ class PyLegateCore(PythonPackage):
     variant('openmp', default=True,
             description='Build with OpenMP support')
 
-    variant('cuda', default=True,
+    variant('cuda', default=False,
             description='Build with CUDA support')
 
     variant ('cuda_arch', default=80, description = 'Cuda architecture')
@@ -68,15 +68,16 @@ class PyLegateCore(PythonPackage):
 
     depends_on('cmake@3.24:')
     depends_on('python@3.8:')
+    depends_on('binutils')
     depends_on('py-pip')
     depends_on('py-scikit-build',type='build')
     depends_on('ninja')
     depends_on('openmpi')
-    depends_on('cutensor@1.3.3:')
+    #depends_on('cutensor@1.3.3:')
 
-    cuda_arch_list = ('60', '70', '75', '80', '86')
-    for _flag in cuda_arch_list:
-        depends_on("nccl cuda_arch=" + _flag, when=" cuda_arch=" + _flag)
+    #cuda_arch_list = ('60', '70', '75', '80', '86')
+    #for _flag in cuda_arch_list:
+    #    depends_on("nccl cuda_arch=" + _flag, when=" cuda_arch=" + _flag)
 
     depends_on('py-setuptools@59:', type='build')
     depends_on('py-cffi')
@@ -99,12 +100,15 @@ class PyLegateCore(PythonPackage):
 #    #depends_on('py-pytest-lazy-fixture', when='+tests')
 #    depends_on('py-docutils', when='+tests')
 
-    depends_on('legion@cr network=gasnet conduit=mpi  +python +cuda +openmp +redop_complex +bindings +shared ')
+   # depends_on('legion@cr  +python +cuda +openmp +redop_complex +bindings +shared ')
+    depends_on('legion@cr  +python +redop_complex +bindings +shared build_type=Debug ')
+
     # FIXME: Add dependencies if required.
     # depends_on("foo")
 
     def install_options(self, spec, prefix):
         options = []
+        options.append('--debug')
         if '+cuda' in spec:
             options.append('--cuda')
         if 'openmp' in spec:
