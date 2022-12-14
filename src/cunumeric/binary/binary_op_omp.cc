@@ -16,43 +16,9 @@
 
 #include "cunumeric/binary/binary_op.h"
 #include "cunumeric/binary/binary_op_template.inl"
+#include "cunumeric/execution_policy/indexing/parallel_loop_omp.h"
 
 namespace cunumeric {
-
-using namespace Legion;
-using namespace legate;
-
-template <BinaryOpCode OP_CODE, LegateTypeCode CODE, int DIM>
-struct BinaryOpImplBody<VariantKind::OMP, OP_CODE, CODE, DIM> {
-  using OP   = BinaryOp<OP_CODE, CODE>;
-  using RHS1 = legate_type_of<CODE>;
-  using RHS2 = rhs2_of_binary_op<OP_CODE, CODE>;
-  using LHS  = std::result_of_t<OP(RHS1, RHS2)>;
-
-  void operator()(OP func,
-                  AccessorWO<LHS, DIM> out,
-                  AccessorRO<RHS1, DIM> in1,
-                  AccessorRO<RHS2, DIM> in2,
-                  const Pitches<DIM - 1>& pitches,
-                  const Rect<DIM>& rect,
-                  bool dense) const
-  {
-    const size_t volume = rect.volume();
-    if (dense) {
-      auto outptr = out.ptr(rect);
-      auto in1ptr = in1.ptr(rect);
-      auto in2ptr = in2.ptr(rect);
-#pragma omp parallel for schedule(static)
-      for (size_t idx = 0; idx < volume; ++idx) outptr[idx] = func(in1ptr[idx], in2ptr[idx]);
-    } else {
-#pragma omp parallel for schedule(static)
-      for (size_t idx = 0; idx < volume; ++idx) {
-        auto p = pitches.unflatten(idx, rect.lo);
-        out[p] = func(in1[p], in2[p]);
-      }
-    }
-  }
-};
 
 /*static*/ void BinaryOpTask::omp_variant(TaskContext& context)
 {

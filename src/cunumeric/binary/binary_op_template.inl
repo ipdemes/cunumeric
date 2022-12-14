@@ -20,6 +20,7 @@
 #include "cunumeric/binary/binary_op.h"
 #include "cunumeric/binary/binary_op_util.h"
 #include "cunumeric/pitches.h"
+#include "cunumeric/execution_policy/indexing/parallel_loop.h"
 
 namespace cunumeric {
 
@@ -27,7 +28,77 @@ using namespace Legion;
 using namespace legate;
 
 template <VariantKind KIND, BinaryOpCode OP_CODE, LegateTypeCode CODE, int DIM>
-struct BinaryOpImplBody;
+struct BinaryOpFunctor {
+  using OP    = BinaryOp<OP_CODE, CODE>;
+  using TRHS1 = legate_type_of<CODE>;
+  using TRHS2 = rhs2_of_binary_op<OP_CODE, CODE>;
+  using TLHS  = std::result_of_t<OP(TRHS1, TRHS2)>;
+  using OUT   = AccessorWO<TLHS, DIM>;
+  using RHS1  = AccessorRO<TRHS1, DIM>;
+  using RHS2  = AccessorRO<TRHS2, DIM>;
+
+  OUT out;
+  RHS1 in1;
+  RHS2 in2;
+
+  TLHS* outptr;
+  const TRHS1* in1ptr;
+  const TRHS2* in2ptr;
+
+  OP func{};
+
+  Pitches<DIM - 1> pitches;
+  Rect<DIM> rect;
+  bool dense;
+  size_t volume;
+
+  struct DenseTag {};
+  struct SparseTag {};
+
+  // constructor
+
+  BinaryOpFunctor(BinaryOpArgs& args) : dense(false), func(args.args)
+  {
+    rect   = args.out.shape<DIM>();
+    volume = pitches.flatten(rect);
+    if (volume == 0) return;
+
+    out = args.out.write_accessor<TLHS, DIM>(rect);
+    in1 = args.in1.read_accessor<TRHS1, DIM>(rect);
+    in2 = args.in2.read_accessor<TRHS2, DIM>(rect);
+
+#ifndef LEGION_BOUNDS_CHECKS
+    // Check to see if this is dense or not
+    bool dense = out.accessor.is_dense_row_major(rect) && in1.accessor.is_dense_row_major(rect) &&
+                 in2.accessor.is_dense_row_major(rect);
+    if (dense) {
+      outptr = out.ptr(rect);
+      in1ptr = in1.ptr(rect);
+      in2ptr = in2.ptr(rect);
+    }
+#endif
+    // func = OP(args.args);
+  }
+
+  __CUDA_HD__ void operator()(const size_t idx, DenseTag) const noexcept
+  {
+    outptr[idx] = func(in1ptr[idx], in2ptr[idx]);
+  }
+
+  __CUDA_HD__ void operator()(const size_t idx, SparseTag) const noexcept
+  {
+    auto p = pitches.unflatten(idx, rect.lo);
+    out[p] = func(in1[p], in2[p]);
+  }
+
+  void execute() const noexcept
+  {
+#ifndef LEGION_BOUNDS_CHECKS
+    if (dense) { return ParallelLoopPolicy<KIND, DenseTag>()(rect, *this); }
+#endif
+    return ParallelLoopPolicy<KIND, SparseTag>()(rect, *this);
+  }
+};
 
 template <VariantKind KIND, BinaryOpCode OP_CODE>
 struct BinaryOpImpl {
@@ -36,35 +107,9 @@ struct BinaryOpImpl {
             std::enable_if_t<BinaryOp<OP_CODE, CODE>::valid>* = nullptr>
   void operator()(BinaryOpArgs& args) const
   {
-    using OP   = BinaryOp<OP_CODE, CODE>;
-    using RHS1 = legate_type_of<CODE>;
-    using RHS2 = rhs2_of_binary_op<OP_CODE, CODE>;
-    using LHS  = std::result_of_t<OP(RHS1, RHS2)>;
-
-    auto rect = args.out.shape<DIM>();
-
-    Pitches<DIM - 1> pitches;
-    size_t volume = pitches.flatten(rect);
-
-    if (volume == 0) return;
-
-    auto out = args.out.write_accessor<LHS, DIM>(rect);
-    auto in1 = args.in1.read_accessor<RHS1, DIM>(rect);
-    auto in2 = args.in2.read_accessor<RHS2, DIM>(rect);
-
-#ifndef LEGION_BOUNDS_CHECKS
-    // Check to see if this is dense or not
-    bool dense = out.accessor.is_dense_row_major(rect) && in1.accessor.is_dense_row_major(rect) &&
-                 in2.accessor.is_dense_row_major(rect);
-#else
-    // No dense execution if we're doing bounds checks
-    bool dense = false;
-#endif
-
-    OP func{args.args};
-    BinaryOpImplBody<KIND, OP_CODE, CODE, DIM>()(func, out, in1, in2, pitches, rect, dense);
+    BinaryOpFunctor<KIND, OP_CODE, CODE, DIM> binaryop(args);
+    binaryop.execute();
   }
-
   template <LegateTypeCode CODE,
             int DIM,
             std::enable_if_t<!BinaryOp<OP_CODE, CODE>::valid>* = nullptr>
