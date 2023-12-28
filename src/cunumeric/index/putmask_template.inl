@@ -82,9 +82,9 @@ struct Putmask {
   void execute() const noexcept
   {
 #ifndef LEGATE_BOUNDS_CHECKS
-    if (dense) { return ParallelLoopPolicy<KIND, DenseTag>()(rect, *this); }
+    if (dense) { return ParallelLoopPolicy<KIND, DenseTag>()(rect.volume(), *this); }
 #endif
-    return ParallelLoopPolicy<KIND, SparseTag>()(rect, *this);
+    return ParallelLoopPolicy<KIND, SparseTag>()(rect.volume(), *this);
   }
 };
 

@@ -249,3 +249,17 @@ def deep_apply(obj: Any, func: Callable[[Any], Any]) -> Any:
         return {k: deep_apply(v, func) for k, v in obj.items()}
     else:
         return func(obj)
+
+
+CUNUMERIC_TYPE_MAP = {
+    bool: ty.bool_,
+    int: ty.int64,
+    float: ty.float64,
+    complex: ty.complex128,
+}
+
+
+def convert_to_cunumeric_dtype(dtype: type) -> ty.Dtype:
+    if dtype in CUNUMERIC_TYPE_MAP:
+        return CUNUMERIC_TYPE_MAP[dtype]
+    raise TypeError(f"{dtype} is not supported")

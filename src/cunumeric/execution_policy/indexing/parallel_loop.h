@@ -25,10 +25,11 @@ struct ParallelLoopPolicy {};
 
 template <class Tag>
 struct ParallelLoopPolicy<VariantKind::CPU, Tag> {
-  template <class RECT, class KERNEL>
-  void operator()(const RECT& rect, KERNEL&& kernel)
+  template <class KERNEL>
+  void operator()(size_t volume, KERNEL&& kernel)
   {
-    const size_t volume = rect.volume();
+    //    const size_t volume = rect.volume();
+    //   std::cout <<"IRINA DEBUG volume = "<<volume <<std::endl;
     for (size_t idx = 0; idx < volume; ++idx) { kernel(idx, Tag{}); }
   }
 };

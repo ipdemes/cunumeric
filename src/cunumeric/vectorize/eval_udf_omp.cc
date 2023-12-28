@@ -1,4 +1,4 @@
-/* Copyright 2022 NVIDIA Corporation
+/* Copyright 2024 NVIDIA Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,14 @@
  *
  */
 
-#pragma once
-
-#include "cunumeric/cunumeric.h"
-#include "cunumeric/execution_policy/indexing/parallel_loop.h"
-#include "cunumeric/omp_help.h"
-
-#include <omp.h>
+#include "cunumeric/vectorize/eval_udf.h"
+#include "cunumeric/vectorize/eval_udf_template.inl"
+#include "cunumeric/execution_policy/indexing/parallel_loop_omp.h"
 
 namespace cunumeric {
 
-template <class Tag>
-struct ParallelLoopPolicy<VariantKind::OMP, Tag> {
-  template <class KERNEL>
-  void operator()(size_t volume, KERNEL&& kernel)
-  {
-//    const size_t volume = rect.volume();
-#pragma omp for schedule(static)
-    for (size_t idx = 0; idx < volume; ++idx) { kernel(idx, Tag{}); }
-  }
-};
-
+/*static*/ void EvalUdfTask::omp_variant(TaskContext& context)
+{
+  eval_udf_template<VariantKind::OMP>(context);
+}
 }  // namespace cunumeric

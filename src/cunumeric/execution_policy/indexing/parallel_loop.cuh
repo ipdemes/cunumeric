@@ -33,10 +33,10 @@ static __global__ void __launch_bounds__(THREADS_PER_BLOCK, MIN_CTAS_PER_SM)
 
 template <class Tag>
 struct ParallelLoopPolicy<VariantKind::GPU, Tag> {
-  template <class RECT, class KERNEL>
-  void operator()(const RECT& rect, KERNEL&& kernel)
+  template <class KERNEL>
+  void operator()(size_t volume, KERNEL&& kernel)
   {
-    const size_t volume = rect.volume();
+    // const size_t volume = rect.volume();
     if (0 == volume) return;
     auto stream         = get_cached_stream();
     const size_t blocks = (volume + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;

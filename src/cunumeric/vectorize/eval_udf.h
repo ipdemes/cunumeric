@@ -1,4 +1,4 @@
-/* Copyright 2022 NVIDIA Corporation
+/* Copyright 204 NVIDIA Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,32 @@
 #pragma once
 
 #include "cunumeric/cunumeric.h"
-#include "cunumeric/execution_policy/indexing/parallel_loop.h"
-#include "cunumeric/omp_help.h"
-
-#include <omp.h>
+#include "core/data/scalar.h"
 
 namespace cunumeric {
 
-template <class Tag>
-struct ParallelLoopPolicy<VariantKind::OMP, Tag> {
-  template <class KERNEL>
-  void operator()(size_t volume, KERNEL&& kernel)
-  {
-//    const size_t volume = rect.volume();
-#pragma omp for schedule(static)
-    for (size_t idx = 0; idx < volume; ++idx) { kernel(idx, Tag{}); }
-  }
+struct EvalUdfArgs {
+  uint64_t cpu_func_ptr;
+  std::vector<Array>& inputs;
+  std::vector<Array>& outputs;
+  std::vector<legate::Scalar> scalars;
+  uint32_t num_outputs;
+  Legion::Processor point;
+  int64_t hash = 0;
+};
+
+class EvalUdfTask : public CuNumericTask<EvalUdfTask> {
+ public:
+  static const int TASK_ID = CUNUMERIC_EVAL_UDF;
+
+ public:
+  static void cpu_variant(legate::TaskContext& context);
+#ifdef LEGATE_USE_OPENMP
+  static void omp_variant(legate::TaskContext& context);
+#endif
+#ifdef LEGATE_USE_CUDA
+  static void gpu_variant(legate::TaskContext& context);
+#endif
 };
 
 }  // namespace cunumeric
