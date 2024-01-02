@@ -28,12 +28,39 @@ namespace cunumeric {
 
 using namespace legate;
 
+template <VariantKind KIND>
+struct UDF {};
+
+#if 0
+template <VariantKind KIND>
+call_udf_dense(UDF<KIND> &udf, const size_t idx)
+{
+  std::vector<void*> udf_args;
+    //for (auto& out : outptrs) { udf_args.push_back(reinterpret_cast<void*>(&outptr[idx])); }
+    //for (auto& in : inptrs) {
+    //  udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&inptr[idx])));
+    //}
+    //for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
+  udf(udf_args.data());
+}
+
+template <VariantKind KIND, int DIM=1>
+call_udf_sparse(UDF<KIND> &udf, const size_t idx, Point<DIM> &p)
+{
+    std::vector<void*> udf_args;
+    //for (auto& out : outputs) { udf_args.push_back(reinterpret_cast<void*>(&out[p])); }
+    //for (auto& in : inputs) { udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[p]))); }
+    //for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
+    udf(udf_args.data());
+}
+#endif
+
 template <VariantKind KIND, Type::Code CODE, int DIM>
 struct EvalUdf {
   using T   = legate_type_of<CODE>;
   using IN  = AccessorRO<T, DIM>;
   using OUT = AccessorRW<T, DIM>;
-  using UDF = void(void**);
+  // using UDF = void(void**);
 
   std::vector<IN> inputs;
   std::vector<OUT> outputs;
@@ -45,7 +72,7 @@ struct EvalUdf {
   bool dense;
   size_t volume;
   std::vector<legate::Scalar> scalars;
-  UDF* udf;
+  UDF<KIND> udf;
   // Legion::Processor point;
   int64_t hash = 0;
 
@@ -54,8 +81,13 @@ struct EvalUdf {
 
   EvalUdf(EvalUdfArgs& args) : dense(false)
   {
-    hash   = args.hash;
-    udf    = reinterpret_cast<UDF*>(args.cpu_func_ptr);
+    udf = UDF<KIND>(args.hash, args.cpu_func_ptr);
+    // hash   = args.hash;
+    //  if (hash!=0){
+    //     udf =
+    //     cu_udf   = get_udf(args.hash);
+    // }
+    // udf    = reinterpret_cast<UDF*>(args.cpu_func_ptr);
     volume = 1;
     if (args.inputs.size() > 0) {
       rect   = args.inputs[0].shape<DIM>();
@@ -92,23 +124,29 @@ struct EvalUdf {
 
   __CUDA_HD__ void operator()(const size_t idx, DenseTag) const noexcept
   {
+    udf.call_udf_dense(idx);
+#if 0
     std::vector<void*> udf_args;
-    for (auto& out : outptrs) { udf_args.push_back(reinterpret_cast<void*>(&out[idx])); }
-    for (auto& in : inptrs) {
-      udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[idx])));
-    }
-    for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
+    //for (auto& out : outptrs) { udf_args.push_back(reinterpret_cast<void*>(&out[idx])); }
+    //for (auto& in : inptrs) {
+    //  udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[idx])));
+    //}
+    //for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
     udf(udf_args.data());
+#endif
   }
 
   __CUDA_HD__ void operator()(const size_t idx, SparseTag) const noexcept
   {
     auto p = pitches.unflatten(idx, rect.lo);
+    udf.call_udf_sparse(idx, p);
+#if 0
     std::vector<void*> udf_args;
-    for (auto& out : outputs) { udf_args.push_back(reinterpret_cast<void*>(&out[p])); }
-    for (auto& in : inputs) { udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[p]))); }
-    for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
+    //for (auto& out : outputs) { udf_args.push_back(reinterpret_cast<void*>(&out[p])); }
+    //for (auto& in : inputs) { udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[p]))); }
+    //for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
     udf(udf_args.data());
+#endif
   }
 
   void execute() const noexcept

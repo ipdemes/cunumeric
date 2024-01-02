@@ -24,4 +24,21 @@ namespace cunumeric {
 {
   eval_udf_template<VariantKind::GPU>(context);
 }
+
+template <>
+struct UDF<VariantKind::GPU> {
+  CUfunction udf;
+  UDF() {}
+  UDF(int64_t hash, uint64_t) { udf = get_udf(hash); }
+  __CUDA_HD__ void call_udf_dense(const size_t idx) const
+  {
+    printf("IRINA DEBUG inside GPU kernel");
+  }
+  template <int DIM = 1>
+  __CUDA_HD__ void call_udf_sparse(const size_t idx, Point<DIM>& p) const
+  {
+    printf("IRINA DEBUG inside GPU kernel");
+  }
+};
+
 }  // namespace cunumeric

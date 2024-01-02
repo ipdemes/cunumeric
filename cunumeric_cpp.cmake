@@ -173,6 +173,7 @@ list(APPEND cunumeric_SOURCES
   src/cunumeric/cephes/i0.cc
   src/cunumeric/stat/histogram.cc
   src/cunumeric/vectorize/eval_udf.cc
+  src/cunumeric/vectorize/create_cu_func.cc
 )
 
 if(Legion_USE_OpenMP)
@@ -223,6 +224,7 @@ if(Legion_USE_OpenMP)
     src/cunumeric/transform/flip_omp.cc
     src/cunumeric/stat/histogram_omp.cc
     src/cunumeric/vectorize/eval_udf_omp.cc
+    src/cunumeric/vectorize/create_cu_func_omp.cc
   )
 endif()
 
@@ -278,6 +280,7 @@ if(Legion_USE_CUDA)
     src/cunumeric/cudalibs.cu
     src/cunumeric/stat/histogram.cu
     src/cunumeric/vectorize/eval_udf.cu
+    src/cunumeric/vectorize/create_cu_func.cu
   )
 endif()
 

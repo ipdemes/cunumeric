@@ -21,13 +21,14 @@ import legate.core.types as ty
 import numba
 import numba.core.ccallback
 import numpy as np
-from legate.core import track_provenance  # , Rect
+from legate.core import Rect, track_provenance
 
 from cunumeric.runtime import runtime
 
 from .array import convert_to_cunumeric_ndarray
 from .config import CuNumericOpCode
 from .module import full
+from .numba_utils import compile_ptx_soa
 from .utils import convert_to_cunumeric_dtype
 
 # _EXTERNAL_REFERENCE_PREFIX = "__extern_ref__"
@@ -255,11 +256,7 @@ class vectorize:
         types = self._get_numba_types()
         arg_types = types
         sig = (*arg_types,)
-
-        cuda_arch = numba.cuda.get_current_device().compute_capability
-        return numba.cuda.compile_ptx(
-            self._numba_func, sig, cc=cuda_arch, device=True
-        )
+        return compile_ptx_soa(self._numba_func, sig, device=True)
 
     def _compile_func_cpu(self) -> numba.core.ccallback.CFunc:
         sig = numba.core.types.void(  # type: ignore
@@ -271,24 +268,23 @@ class vectorize:
 
     def _create_cuda_function(self, num_gpus: int) -> None:
         # create CUDA function
-        assert False
 
-    #        launch_domain = Rect(lo=(0,), hi=(num_gpus,))
-    #        kernel_task = self._context.create_manual_task(
-    #            CuNumericOpCode.CREATE_CU_FUNCTION,
-    #            launch_domain=launch_domain,
-    #        )
-    #        ptx_hash = hash(self._gpu_func[0])
-    #        kernel_task.add_scalar_arg(ptx_hash, ty.int64)
-    #        kernel_task.add_scalar_arg(self._gpu_func[0], ty.string)
-    #        kernel_task.execute()
-    #        # we want to make sure EVAL_UDF function is not executed before
-    #        # CUDA kernel is created
-    #        self._context.issue_execution_fence(block=True)
-    #
-    #        # task has finished by the time we set self._created to True
-    #        if self._cache:
-    #            self._created = True
+        launch_domain = Rect(lo=(0,), hi=(num_gpus,))
+        kernel_task = self._context.create_manual_task(
+            CuNumericOpCode.CREATE_CU_FUNC,
+            launch_domain=launch_domain,
+        )
+        ptx_hash = hash(self._gpu_func[0])
+        kernel_task.add_scalar_arg(ptx_hash, ty.int64)
+        kernel_task.add_scalar_arg(self._gpu_func[0], ty.string)
+        kernel_task.execute()
+        # we want to make sure EVAL_UDF function is not executed before
+        # CUDA kernel is created
+        self._context.issue_execution_fence(block=True)
+
+        # task has finished by the time we set self._created to True
+        if self._cache:
+            self._created = True
 
     @track_provenance()
     def _execute(self, is_gpu: bool, num_gpus: int = 0) -> None:
@@ -502,7 +498,8 @@ class vectorize:
         self._numba_func = self._build_python_function()
         if runtime.num_gpus > 0:
             if not self._created:
-                self._gpu_func = self._compile_func_gpu()
+                self._gpu_func, _ = self._compile_func_gpu()
+                print("IRINA DEBUG _gpu_func = ", self._gpu_func)
             self._execute(True, runtime.num_gpus)
         else:
             if not self._created:

@@ -21,19 +21,9 @@
 
 namespace cunumeric {
 
-struct EvalUdfArgs {
-  uint64_t cpu_func_ptr;
-  std::vector<Array>& inputs;
-  std::vector<Array>& outputs;
-  std::vector<legate::Scalar> scalars;
-  uint32_t num_outputs;
-  Legion::Processor point;
-  int64_t hash = 0;
-};
-
-class EvalUdfTask : public CuNumericTask<EvalUdfTask> {
+class CreateCUFuncTask : public CuNumericTask<CreateCUFuncTask> {
  public:
-  static const int TASK_ID = CUNUMERIC_EVAL_UDF;
+  static const int TASK_ID = CUNUMERIC_CREATE_CU_FUNC;
 
  public:
   static void cpu_variant(legate::TaskContext& context);

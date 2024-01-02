@@ -29,4 +29,34 @@ namespace  // unnamed
 static void __attribute__((constructor)) register_tasks(void) { EvalUdfTask::register_variants(); }
 }  // namespace
 
+template <>
+struct UDF<VariantKind::CPU> {
+  using UDFT = void(void**);
+  UDFT* udf;
+  UDF() {}
+  UDF(int64_t, uint64_t cpu_func_ptr) { udf = reinterpret_cast<UDFT*>(cpu_func_ptr); }
+  __CUDA_HD__ void call_udf_dense(const size_t idx) const
+  {
+    printf("IRINA DEBUG inside CPU kernel");
+    std::vector<void*> udf_args;
+    // for (auto& out : outptrs) { udf_args.push_back(reinterpret_cast<void*>(&outptr[idx])); }
+    // for (auto& in : inptrs) {
+    //   udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&inptr[idx])));
+    // }
+    // for (auto s : scalars) { udf_args.push_back(const_cast<void*>(s.ptr())); }
+    udf(udf_args.data());
+  }
+  template <int DIM = 1>
+  __CUDA_HD__ void call_udf_sparse(const size_t idx, Point<DIM>& p) const
+  {
+    printf("IRINA DEBUG inside CPU kernel");
+    std::vector<void*> udf_args;
+    // for (auto& out : outputs) { udf_args.push_back(reinterpret_cast<void*>(&out[p])); }
+    // for (auto& in : inputs) {
+    // udf_args.push_back(reinterpret_cast<void*>(const_cast<T*>(&in[p]))); } for (auto s : scalars)
+    // { udf_args.push_back(const_cast<void*>(s.ptr())); }
+    udf(udf_args.data());
+  }
+};
+
 }  // namespace cunumeric
